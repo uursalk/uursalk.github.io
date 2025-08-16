@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Good Morning Test</title>
+    <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+</head>
+<body>
+    <h2>📱 Good Morning Messages Test</h2>
+    <p>Günaydın mesajları için test sayfası</p>
+    
+    <button id="subscribe-btn" onclick="subscribeToNotifications()">
+        🔔 Bildirimlere Abone Ol
+    </button>
+    
+    <div id="status"></div>
+
+    <script>
+        // OneSignal initialize - SENIN APP ID'NI BURAYA YAZ
+        window.OneSignal = window.OneSignal || [];
+        OneSignal.push(function() {
+            OneSignal.init({
+                appId: "e2ec555f-e24b-49e4-9e28-288e0dc1b3bd", // OneSignal'dan aldığın App ID
+                safari_web_id: "web.onesignal.auto.xxxxxxxx", // Oto oluşur
+                allowLocalhostAsSecureOrigin: true // Test için
+            });
+        });
+
+        function subscribeToNotifications() {
+            OneSignal.push(function() {
+                OneSignal.showSlidedownPrompt().then(function() {
+                    // Subscription sonucu
+                    OneSignal.getUserId().then(function(userId) {
+                        document.getElementById('status').innerHTML = 
+                            '✅ Başarılı! User ID: ' + userId;
+                    });
+                });
+            });
+        }
+        
+        // Otomatik subscriber kontrolü
+        OneSignal.push(function() {
+            OneSignal.getUserId().then(function(userId) {
+                if (userId) {
+                    document.getElementById('status').innerHTML = 
+                        '🎉 Zaten abone! User ID: ' + userId;
+                    document.getElementById('subscribe-btn').style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
