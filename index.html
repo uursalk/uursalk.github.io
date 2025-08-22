@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Günlük Mesaj Aboneliği</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="time"],
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .categories-section {
+            margin: 25px 0;
+        }
+        
+        .categories-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .category-item:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .category-item.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .category-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+        
+        .category-info {
+            flex: 1;
+        }
+        
+        .category-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .category-description {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌅 Günlük Mesaj Aboneliği</h1>
+            <p>Her sabah size özel mesajlar alın</p>
+        </div>
+        
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="name">Ad Soyad</label>
+                <input type="text" id="name" name="name" required placeholder="Adınızı yazın">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">E-posta</label>
+                <input type="email" id="email" name="email" required placeholder="email@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="wakeUpTime">Uyanma Saatiniz</label>
+                <input type="time" id="wakeUpTime" name="wakeUpTime" value="09:00" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="timezone">Saat Dilimi</label>
+                <select id="timezone" name="timezone" required>
+                    <option value="Europe/Istanbul" selected>Türkiye (UTC+3)</option>
+                    <option value="Europe/London">Londra (UTC+0)</option>
+                    <option value="America/New_York">New York (UTC-5)</option>
+                    <option value="Asia/Dubai">Dubai (UTC+4)</option>
+                    <option value="Europe/Berlin">Berlin (UTC+1)</option>
+                </select>
+            </div>
+            
+            <div class="categories-section">
+                <label>Almak İstediğiniz Mesaj Kategorileri</label>
+                <div class="categories-grid">
+                    <div class="category-item" onclick="toggleCategory(this, 1)">
+                        <input type="checkbox" id="cat1" name="categories" value="1">
+                        <div class="category-info">
+                            <div class="category-name">🔥 Motivasyon</div>
+                            <div class="category-description">Güç verici ve ilham dolu mesajlar</div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-item" onclick="toggleCategory(this, 2)">
+                        <input type="checkbox" id="cat2" name="categories" value="2">
+                        <div class="category-info">
+                            <div class="category-name">❤️ Sevgi</div>
+                            <div class="category-description">Sıcak ve sevgi dolu mesajlar</div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-item" onclick="toggleCategory(this, 3)">
+                        <input type="checkbox" id="cat3" name="categories" value="3">
+                        <div class="category-info">
+                            <div class="category-name">💫 Ünlü Sözler</div>
+                            <div class="category-description">Tarihin büyük düşünürlerinden alıntılar</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Aboneliği Başlat
+            </button>
+            
+            <div class="loading" id="loading">
+                <p>⏳ Kaydınız oluşturuluyor...</p>
+            </div>
+            
+            <div class="success-message" id="successMessage">
+                🎉 Başarıyla kaydoldunuz! Bildirimleri açmayı unutmayın.
+            </div>
+            
+            <div class="error-message" id="errorMessage">
+                ❌ Bir hata oluştu. Lütfen tekrar deneyin.
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // Supabase bağlantısı - BURAYA KENDİ SUPABASE URL VE KEY'İNİZİ YAZIN
+    const SUPABASE_URL = 'https://yyniduainrjhygvhhwqx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5bmlkdWFpbnJqaHlndmhod3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2OTQ2NTcsImV4cCI6MjA3MTI3MDY1N30.iuGEEW6wGKT2UAI055_ezs-JsyQIglvDGMGyAcYaY7k';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // OneSignal başlatma (External ID'yi sonra ayarlayacağız)
+    window.OneSignal = window.OneSignal || [];
+    OneSignal.push(function() {
+        OneSignal.init({
+            appId: "e2ec555f-e24b-49e4-9e28-288e0dc1b3bd", // BURAYA KENDI APP ID'NİZİ YAZIN
+            serviceWorkerParam: { scope: '/push/' } // Bu satır, Service Worker'ın doğru dizinde çalışmasını sağlar
+        });
+    });
+
+    function toggleCategory(element, categoryId) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        element.classList.toggle('selected', checkbox.checked);
+    }
+
+    document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // UI durumunu güncelle
+        submitBtn.disabled = true;
+        loading.style.display = 'block';
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        try {
+            // Form verilerini al
+            const formData = new FormData(e.target);
+            const name = formData.get('name');
+            const email = formData.get('email');
+            const wakeUpTime = formData.get('wakeUpTime');
+            const timezone = formData.get('timezone');
+            const selectedCategories = Array.from(document.querySelectorAll('input[name="categories"]:checked')).map(cb => parseInt(cb.value));
+            
+            if (selectedCategories.length === 0) {
+                throw new Error('En az bir kategori seçmelisiniz!');
+            }
+            
+            // UUID oluştur (bu, veritabanı user_id'niz olacak)
+            const userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            
+            // 🔥 KRİTİK DEĞİŞİKLİK: OneSignal External ID'yi ayarlayın
+            await OneSignal.setExternalUserId(userId);
+            console.log('OneSignal External ID ayarlandı:', userId);
+            
+            // Kullanıcıyı users tablosuna kaydet
+            const { error: userError } = await supabase
+                .from('users')
+                .insert({
+                    user_id: userId,
+                    name: name,
+                    email: email,
+                    timezone: timezone,
+                    wake_up_time: wakeUpTime,
+                    is_active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                });
+            
+            if (userError) throw userError;
+            
+            // Seçilen kategorileri user_preferences tablosuna kaydet
+            const preferences = selectedCategories.map(categoryId => ({
+                user_id: userId,
+                category_id: categoryId,
+                is_selected: true,
+                priority: 1,
+                created_at: new Date().toISOString()
+            }));
+            
+            const { error: preferencesError } = await supabase
+                .from('user_preferences')
+                .insert(preferences);
+            
+            if (preferencesError) throw preferencesError;
+            
+            // Başarı mesajını göster
+            successMessage.style.display = 'block';
+            e.target.reset();
+            
+            // Formu gizle (isteğe bağlı)
+            setTimeout(() => {
+                e.target.style.display = 'none';
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Kayıt hatası:', error);
+            errorMessage.textContent = error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.';
+            errorMessage.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            loading.style.display = 'none';
+        }
+    });
+    
+    // OneSignal script'ini yükle
+    const script = document.createElement('script');
+    script.src = 'https://cdn.onesignal.com/sdks/OneSignalSDK.js';
+    script.async = true;
+    document.head.appendChild(script);
+</script>
+</body>
+</html>
